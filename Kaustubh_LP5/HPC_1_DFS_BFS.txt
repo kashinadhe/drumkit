@@ -1,0 +1,182 @@
+#include <bits/stdc++.h>
+#include <omp.h>
+using namespace std;
+//={{1},{0,2,3},{1,4,5},{1,4},{2,3},{2}};
+class Graph{
+    public:
+      int vertices;
+      int edges;
+      
+      vector<vector<int>> graph;
+      vector<bool> visited;
+  
+  Graph(){
+      int x,y;
+      //cout<<"Enter number of vertices: ";
+      cin>>x;
+      //cout<<"Enter number of edges: ";
+      cin>>y;
+      vertices=x;
+      edges=y;
+      
+      graph.resize(x,vector<int>{});
+      visited.resize(x,false);
+      for(int i=0;i<edges;i++){
+          int a,b;
+          //cout<<"Enter edge "<<i+1;
+          cin>>a;
+          cin>>b;
+          
+          graph[a].push_back(b);
+          graph[b].push_back(a);
+      }
+  }
+  
+  void displayGraph(){
+      for(int i=0;i<graph.size();i++){
+          cout<<i<<"->";
+          for(int j=0;j<graph[i].size();j++){
+              cout<<graph[i][j]<<" ";
+          }
+          cout<<"\n";
+      }
+  }
+  
+  void dfs(int i){
+    stack<int> st;
+    st.push(i);
+    cout<<"dfs: ";
+    while(!st.empty()){
+        int current=st.top();
+        visited[current]=true;
+        st.pop();
+        cout<<current<<" ";
+        for(int j=0;j<graph[current].size();j++){
+            if(!visited[graph[current][j]]){
+                visited[graph[current][j]]=true;
+                st.push(graph[current][j]);
+            }
+        }
+    }
+    cout<<"\n";
+    
+  }
+  
+  void parallelDfs(int i){
+      stack<int> st;
+      st.push(i);
+      visited[i]=true;
+      while(!st.empty()){
+          int current=st.top();
+          cout<<current<<" ";
+          #pragma omp critical
+          st.pop();
+          #pragma omp parallel for
+          for(int j=0;j<graph[current].size();j++){
+              
+              if(!visited[graph[current][j]]){
+                  #pragma omp critical
+                  {
+                    visited[graph[current][j]]=true;
+                    st.push(graph[current][j]);
+                  }
+                  
+              }
+          }
+          
+      }
+      cout<<"\n";
+  }
+  
+  void bfs(int i){
+      queue<int> q;
+      q.push(i);
+      visited[i]=true;
+      
+      while(!q.empty()){
+          int current=q.front();
+          cout<<current<<" ";
+          q.pop();
+          
+          for(int j=0;j<graph[current][j];j++){
+              if(!visited[graph[current][j]]){
+                  visited[graph[current][j]]=true;
+                  q.push(graph[current][j]);
+              }
+          }
+          
+      }
+      cout<<"\n";
+  }
+  
+  void parallelBfs(int i){
+      queue<int> q;
+      q.push(i);
+      visited[i]=true;
+      
+      while(!q.empty()){
+          int current=q.front();
+          cout<<current<<" ";
+          #pragma omp critical
+          q.pop();
+          #pragma omp parallel for
+          for(int j=0;j<graph[current].size();j++){
+              if(!visited[graph[current][j]]){
+                  #pragma omp critical
+                  {
+                    visited[graph[current][j]]=true;
+                    q.push(graph[current][j]);
+                  }
+                  
+              }
+          }
+      }
+      cout<<"\n";
+  }
+  
+  void resetVisited(){
+      for(int i=0;i<visited.size();i++) visited[i]=false;
+  }
+  
+};
+
+int main() {
+    Graph graph;
+    graph.displayGraph();
+    
+    auto start=chrono::high_resolution_clock::now();
+    cout<<"DFS: ";
+    graph.dfs(0);
+    auto end=chrono::high_resolution_clock::now();
+    cout<<"\n";
+    cout<<"Time taken: "<<chrono::duration_cast<chrono::microseconds>(end-start).count()<<"microsends\n";
+    
+    graph.resetVisited();
+    
+    start=chrono::high_resolution_clock::now();
+    cout<<"Parallel DFS: ";
+    graph.parallelDfs(0);
+    end=chrono::high_resolution_clock::now();
+    cout<<"\n";
+    cout<<"Time taken: "<<chrono::duration_cast<chrono::microseconds>(end-start).count()<<"microseconds\n";
+    
+    graph.resetVisited();
+    
+    start=chrono::high_resolution_clock::now();
+    
+    cout<<"BFS: ";
+    graph.bfs(0);
+    end=chrono::high_resolution_clock::now();
+    cout<<"\n";
+    cout<<"Time taken: "<<chrono::duration_cast<chrono::microseconds>(end-start).count()<<"microseconds\n";
+    
+    graph.resetVisited();
+    
+    start=chrono::high_resolution_clock::now();
+    cout<<"Parallel BFS: ";
+    graph.parallelBfs(0);
+    end=chrono::high_resolution_clock::now();
+    cout<<"\n";
+    cout<<"Time taken: "<<chrono::duration_cast<chrono::microseconds>(end-start).count()<<"microseconds";
+    
+}

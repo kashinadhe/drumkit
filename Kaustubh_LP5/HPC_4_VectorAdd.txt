@@ -1,0 +1,73 @@
+//My Code
+#include <bits/stdc++.h>
+#include <cuda.h>
+
+using namespace std;
+
+void cpuAdd(int *acpu, int *bcpu, int *ccpu, int size){
+    for(int i=0;i<size;i++) ccpu[i]=acpu[i]+bcpu[i];
+}
+
+__global__ void gpuAdd(int *agpu, int *bgpu, int *cgpu, int size){
+    int blockid=blockIdx.x*blockDim.x+threadIdx.x;
+    if(blockid<size) cgpu[blockid]=agpu[blockid]+bgpu[blockid];
+}
+
+int main(){
+    
+    int *acpu, *bcpu, *ccpu, *agpu, *bgpu, *cgpu;
+    int n=1<<4;
+    
+    acpu=new int[n];
+    bcpu=new int[n];
+    ccpu=new int[n];
+    
+    int size=n*sizeof(int);
+    cudaMalloc(&agpu,size);
+    cudaMalloc(&bgpu,size);
+    cudaMalloc(&cgpu,size);
+    
+    for(int i=0;i<n;i++){
+        acpu[i]=rand()%100;
+        bcpu[i]=rand()%100;
+    }
+    cudaMemcpy(agpu,acpu,size, cudaMemcpyHostToDevice);
+    cudaMemcpy(bgpu,bcpu,size,cudaMemcpyHostToDevice);
+    
+    cudaEvent_t start,stop;
+    float elapsedTime;
+    
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start,0);
+    cpuAdd(acpu,bcpu,ccpu,n);
+    cudaEventRecord(stop,0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+    
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    
+    cout<<"cpu add elapsed time: "<<elapsedTime<<"ms\n";
+    
+    int threads=1024;
+    int blocks=(n+threads-1)/threads;
+    
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start,0);
+    gpuAdd<<<blocks,threads>>>(agpu,bgpu,cgpu,n);
+    cudaEventRecord(stop,0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsedTime,start,stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    cout<<"gpu add elapsed time: "<<elapsedTime<<"ms\n";
+    
+    cudaFree(agpu);
+    cudaFree(bgpu);
+    cudaFree(cgpu);
+    
+    return 0;
+}
+
